@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LB Empréstimos | Mobile App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root { --accent: #00f2ff; --bg: #050a18; --card: #0d162d; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: #e2e8f0; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
+        .glass-card { background: var(--card); border: 1px solid rgba(255,255,255,0.03); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .input-field { background: #16203a; border: 1px solid rgba(255,255,255,0.05); padding: 0.85rem; border-radius: 0.75rem; width: 100%; outline: none; color: white; font-size: 16px; /* Evita zoom no iPhone */ }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .lb-logo { width: 45px; height: 45px; background: linear-gradient(135deg, #0062ff 0%, #00f2ff 100%); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #050a18; font-size: 20px; box-shadow: 0 0 20px rgba(0, 242, 255, 0.4); }
+        
+        .neon-alert { font-weight: 900; font-size: 1.2rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; text-shadow: 0 0 10px rgba(0, 242, 255, 0.7); animation: blink-neon 1.5s infinite alternate; }
+        @keyframes blink-neon { 0% { opacity: 1; } 100% { opacity: 0.4; } }
+
+        .status-atrasado { background: rgba(255, 59, 48, 0.1); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.2); }
+        .status-em-dia { background: rgba(52, 199, 89, 0.1); color: #34c759; border: 1px solid rgba(52, 199, 89, 0.2); }
+        
+        #login-screen { position: fixed; inset: 0; background: #050a18; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .photo-preview { width: 42px; height: 42px; border-radius: 12px; object-fit: cover; border: 2px solid var(--accent); }
+        
+        /* Ajuste de Scroll para Celular */
+        .overflow-touch { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        
+        @media (max-width: 768px) {
+            .neon-alert { font-size: 1rem; }
+            aside { width: 100%; height: auto; position: relative; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
+            main { margin-left: 0 !important; padding: 15px !important; }
+            .grid-mobile { grid-template-columns: 1fr 1fr !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="login-screen">
+        <div class="glass-card p-8 rounded-[2.5rem] w-full max-w-sm text-center shadow-2xl">
+            <div class="lb-logo mx-auto mb-4 font-black">LB</div>
+            <h1 class="text-xl font-bold text-white mb-6 uppercase tracking-tighter italic">LB Empréstimos</h1>
+            <div class="space-y-4">
+                <input type="text" id="user-login" placeholder="LBCRED" class="input-field text-center font-bold tracking-widest uppercase">
+                <input type="password" id="pass-login" placeholder="LB123" class="input-field text-center font-bold">
+                <button onclick="handleLogin()" class="w-full bg-gradient-to-r from-blue-600 to-cyan-400 text-black font-extrabold py-4 rounded-2xl transition-all shadow-lg text-xs uppercase tracking-widest">Acessar App</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-content" style="display: none;">
+        <aside class="fixed left-0 top-0 h-full w-64 glass-card z-50 flex flex-col p-6 border-r border-white/5">
+            <div class="mb-10 flex items-center gap-4">
+                <div class="lb-logo font-black">LB</div>
+                <div><span class="font-extrabold text-sm text-white block uppercase italic">LB Empréstimos</span></div>
+            </div>
+            <nav class="space-y-2 flex-grow">
+                <button onclick="showTab('dash')" class="w-full text-left p-4 rounded-xl hover:bg-white/5 text-sm font-bold text-white">Dashboard</button>
+                <button onclick="showTab('contracts')" class="w-full text-left p-4 rounded-xl hover:bg-white/5 text-sm font-bold text-slate-400">Contratos</button>
+                <button onclick="showTab('database')" class="w-full text-left p-4 rounded-xl hover:bg-white/5 text-sm font-bold text-slate-400">Clientes</button>
+            </nav>
+            <button onclick="logout()" class="w-full text-left p-4 rounded-xl text-rose-500 font-bold text-sm">Sair do App</button>
+        </aside>
+
+        <main class="md:ml-64 p-4 md:p-8">
+            <header class="flex justify-between items-center mb-8 gap-2">
+                <div class="neon-alert italic">LB Empréstimos</div>
+                <div id="clock" class="text-sm font-mono text-cyan-400 font-bold bg-white/5 p-2 rounded-lg">00:00:00</div>
+            </header>
+
+            <section id="tab-dash" class="tab-content active space-y-4">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center grid-mobile">
+                    <div class="glass-card p-4 rounded-2xl border-t-2 border-blue-600"><p class="text-slate-500 text-[8px] font-bold uppercase">Capital</p><h3 id="dash-total" class="text-sm font-bold text-white">R$ 0,00</h3></div>
+                    <div class="glass-card p-4 rounded-2xl border-t-2 border-cyan-400"><p class="text-slate-500 text-[8px] font-bold uppercase">Juros</p><h3 id="dash-yield" class="text-sm font-bold text-cyan-400">R$ 0,00</h3></div>
+                    <div class="glass-card p-4 rounded-2xl border-t-2 border-yellow-500"><p class="text-slate-500 text-[8px] font-bold uppercase">Multas</p><h3 id="dash-multa" class="text-sm font-bold text-yellow-500">R$ 0,00</h3></div>
+                    <div class="glass-card p-4 rounded-2xl border-t-2 border-red-500"><p class="text-slate-500 text-[8px] font-bold uppercase">Atrasos</p><h3 id="dash-atraso" class="text-sm font-bold text-red-500">0</h3></div>
+                </div>
+
+                <div class="glass-card p-6 rounded-[2rem] border border-white/5 shadow-2xl">
+                    <h4 class="text-xs font-bold mb-4 text-cyan-400 uppercase tracking-widest">Nova Operação</h4>
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-4 bg-white/5 p-3 rounded-xl border border-white/5">
+                            <label class="cursor-pointer">
+                                <input type="file" id="f-photo" class="hidden" accept="image/*" onchange="previewImage(this)">
+                                <img id="photo-img-preview" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="w-10 h-10 rounded-full object-cover">
+                            </label>
+                            <input id="f-name" type="text" class="bg-transparent border-none outline-none text-white w-full text-sm" placeholder="NOME DO CLIENTE">
+                        </div>
+                        <input id="f-doc" type="text" class="input-field" placeholder="CPF / CNPJ">
+                        <input id="f-contact" type="text" class="input-field" placeholder="WHATSAPP (DDD + NÚMERO)">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input id="f-val" type="number" class="input-field" placeholder="VALOR R$">
+                            <input id="f-tax" type="number" class="input-field" placeholder="TAXA %">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input id="f-qty" type="number" class="input-field" placeholder="PRAZO">
+                            <select id="f-unit" class="input-field bg-slate-900"><option value="dias">Dias</option><option value="meses" selected>Meses</option></select>
+                        </div>
+                        <input id="f-date" type="date" class="input-field">
+                        <button onclick="saveData()" class="w-full bg-gradient-to-r from-blue-600 to-cyan-400 text-black font-extrabold py-4 rounded-xl text-xs uppercase tracking-widest transition-all">Registrar Agora</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-contracts" class="tab-content space-y-4">
+                <div class="glass-card p-3 rounded-xl"><input type="text" id="search-input" onkeyup="render()" placeholder="BUSCAR..." class="bg-transparent outline-none text-sm w-full text-white px-2 font-bold uppercase"></div>
+                <div class="glass-card rounded-2xl overflow-hidden overflow-touch">
+                    <table class="w-full text-left text-[10px]">
+                        <thead class="bg-white/5 text-slate-500 uppercase font-bold tracking-widest">
+                            <tr><th class="p-3">Cliente</th><th class="p-3">Venc.</th><th class="p-3">Total</th><th class="p-3 text-right">Ação</th></tr>
+                        </thead>
+                        <tbody id="contract-list" class="divide-y divide-white/5"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="tab-database" class="tab-content space-y-4">
+                <div class="glass-card p-3 rounded-xl"><input type="text" id="db-search" onkeyup="render()" placeholder="CLIENTES..." class="bg-transparent outline-none text-sm w-full text-white px-2 font-bold uppercase"></div>
+                <div class="glass-card rounded-2xl overflow-hidden overflow-touch">
+                    <table class="w-full text-left text-[10px]">
+                        <thead class="bg-cyan-500/10 text-cyan-400 uppercase font-bold tracking-widest">
+                            <tr><th class="p-3">Nome</th><th class="p-3">CPF</th><th class="p-3">Status</th><th class="p-3 text-right">Del</th></tr>
+                        </thead>
+                        <tbody id="db-list" class="divide-y divide-white/5"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        let contracts = JSON.parse(localStorage.getItem('lb_mobile_v12')) || [];
+        let customers = JSON.parse(localStorage.getItem('lb_customers_mobile_v12')) || [];
+        let currentPhoto = "";
+
+        function handleLogin() {
+            const u = document.getElementById('user-login').value.trim().toUpperCase();
+            const p = document.getElementById('pass-login').value.trim();
+            if(u === 'LBCRED' && p === 'LB123') {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+                render(); startTime();
+            } else { alert("Senha Errada!"); }
+        }
+
+        function logout() { window.location.reload(); }
+        function showTab(id) { 
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); 
+            document.getElementById('tab-' + id).classList.add('active'); 
+            if(window.innerWidth < 768) { /* Auto-close menu no mobile (opcional) */ }
+            render(); 
+        }
+
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => { document.getElementById('photo-img-preview').src = e.target.result; currentPhoto = e.target.result; };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function saveData() {
+            const data = {
+                id: Date.now(), photo: currentPhoto || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                name: document.getElementById('f-name').value.trim(), doc: document.getElementById('f-doc').value.trim(),
+                contact: document.getElementById('f-contact').value.trim(), val: parseFloat(document.getElementById('f-val').value),
+                tax: parseFloat(document.getElementById('f-tax').value), qty: parseInt(document.getElementById('f-qty').value),
+                unit: document.getElementById('f-unit').value, date: document.getElementById('f-date').value
+            };
+            if(!data.name || isNaN(data.val)) return alert("Preencha os dados!");
+            if(!customers.some(c => c.doc === data.doc)) customers.push({ name: data.name, doc: data.doc, contact: data.contact, photo: data.photo });
+            contracts.push(data);
+            localStorage.setItem('lb_mobile_v12', JSON.stringify(contracts));
+            localStorage.setItem('lb_customers_mobile_v12', JSON.stringify(customers));
+            clearForm(); render(); alert("Contrato Ativo!");
+        }
+
+        function settleCycle(id) {
+            const idx = contracts.findIndex(item => item.id === id);
+            const l = contracts[idx];
+            const profit = l.val * (l.tax / 100);
+            let v = new Date(l.date); (l.unit==='dias') ? v.setDate(v.getDate() + l.qty) : v.setMonth(v.getMonth() + l.qty);
+            const hoje = new Date(); hoje.setHours(0,0,0,0); v.setHours(0,0,0,0);
+            let m = (v < hoje) ? Math.ceil(Math.abs(hoje - v) / (1000 * 60 * 60 * 24)) * 100 : 0;
+
+            if(confirm(`RENOVAR: R$ ${(profit+m).toLocaleString()}?`)) {
+                contracts[idx].date = new Date().toISOString().split('T')[0];
+                localStorage.setItem('lb_mobile_v12', JSON.stringify(contracts));
+                render();
+            }
+        }
+
+        function sendZap(id) {
+            const l = contracts.find(item => item.id === id);
+            const profit = l.val * (l.tax / 100);
+            let v = new Date(l.date); (l.unit==='dias') ? v.setDate(v.getDate()+l.qty) : v.setMonth(v.getMonth()+l.qty);
+            const hoje = new Date(); hoje.setHours(0,0,0,0); v.setHours(0,0,0,0);
+            let msg = "";
+            if (v < hoje) {
+                const d = Math.ceil(Math.abs(hoje-v)/(1000*60*60*24));
+                msg = `⚠️ *COBRANÇA LB EMPRÉSTIMOS*\nOlá *${l.name.toUpperCase()}*, valor em atraso: R$ ${(profit + (d*100)).toLocaleString('pt-BR')}. Regularize hoje!`;
+            } else {
+                msg = `Olá *${l.name.toUpperCase()}*, lembrete LB. Vencimento: ${v.toLocaleDateString('pt-BR')}. Valor ciclo: R$ ${profit.toLocaleString('pt-BR')}.`;
+            }
+            window.open(`https://api.whatsapp.com/send?phone=55${l.contact.replace(/\D/g,'')}&text=${encodeURIComponent(msg)}`);
+        }
+
+        function render() {
+            const cList = document.getElementById('contract-list');
+            const dbList = document.getElementById('db-list');
+            const term = document.getElementById('search-input').value.toLowerCase();
+            const hoje = new Date(); hoje.setHours(0,0,0,0);
+            cList.innerHTML = ''; dbList.innerHTML = '';
+            let tT = 0, tP = 0, tM = 0, tA = 0;
+
+            contracts.filter(l => l.name.toLowerCase().includes(term)).sort((a,b)=>a.name.localeCompare(b.name)).forEach(l => {
+                const profit = l.val * (l.tax/100);
+                let v = new Date(l.date); (l.unit==='dias') ? v.setDate(v.getDate()+l.qty) : v.setMonth(v.getMonth()+l.qty);
+                v.setHours(0,0,0,0);
+                let m = 0, sC = "status-em-dia";
+                if(v < hoje) { m = Math.ceil(Math.abs(hoje-v)/(1000*60*60*24))*100; sC="status-atrasado"; tA++; tM+=m; }
+                
+                cList.innerHTML += `<tr class="border-b border-white/5">
+                    <td class="p-3 flex items-center gap-2"><img src="${l.photo}" class="photo-preview"><div class="font-bold text-white uppercase truncate w-20">${l.name}</div></td>
+                    <td class="p-3 text-white font-bold">${v.toLocaleDateString('pt-BR').slice(0,5)}</td>
+                    <td class="p-3"><div class="font-bold text-cyan-400">R$ ${(profit+m).toLocaleString()}</div></td>
+                    <td class="p-3 text-right flex gap-1 justify-end mt-2">
+                        <button onclick="settleCycle(${l.id})" class="bg-cyan-500 text-black px-2 py-1 rounded text-[8px] font-bold">OK</button>
+                        <button onclick="sendZap(${l.id})" class="bg-green-600 text-white px-2 py-1 rounded text-[8px] font-bold">ZAP</button>
+                        <button onclick="delContract(${l.id})" class="bg-red-600 text-white px-2 py-1 rounded text-[8px] font-bold">X</button>
+                    </td>
+                </tr>`;
+                tT+=l.val; tP+=profit;
+            });
+
+            customers.sort((a,b)=>a.name.localeCompare(b.name)).forEach(c => {
+                const ativo = contracts.some(con => con.doc === c.doc);
+                dbList.innerHTML += `<tr class="border-b border-white/5">
+                    <td class="p-3 uppercase font-bold text-white">${c.name.slice(0,15)}</td>
+                    <td class="p-3 text-slate-500 font-mono">${c.doc.slice(-4)}</td>
+                    <td class="p-3 font-bold ${ativo?'text-emerald-400':'text-slate-600'}">${ativo?'ATV':'ANT'}</td>
+                    <td class="p-3 text-right"><button onclick="delCustomer('${c.doc}')" class="text-red-500 font-bold">X</button></td>
+                </tr>`;
+            });
+            document.getElementById('dash-total').innerText = `R$ ${tT.toLocaleString('pt-BR')}`;
+            document.getElementById('dash-yield').innerText = `R$ ${tP.toLocaleString('pt-BR')}`;
+            document.getElementById('dash-multa').innerText = `R$ ${tM.toLocaleString('pt-BR')}`;
+            document.getElementById('dash-atraso').innerText = tA;
+        }
+
+        function delContract(id) { if(confirm("QUITAR?")) { contracts = contracts.filter(c => c.id !== id); localStorage.setItem('lb_mobile_v12', JSON.stringify(contracts)); render(); } }
+        function delCustomer(doc) { if(confirm("DEL?")) { customers = customers.filter(c => c.doc !== doc); localStorage.setItem('lb_customers_mobile_v12', JSON.stringify(customers)); render(); } }
+        function clearForm() { ["f-name","f-doc","f-contact","f-val","f-tax","f-qty"].forEach(id => document.getElementById(id).value = ""); document.getElementById('photo-img-preview').src = "https://cdn-icons-png.flaticon.com/512/149/149071.png"; currentPhoto = ""; }
+        function startTime() { setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000); document.getElementById('f-date').valueAsDate = new Date(); }
+    </script>
+</body>
+</html>
